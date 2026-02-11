@@ -460,7 +460,7 @@ const CandidatesList = () => {
           <h1 className="text-2xl font-semibold text-gray-900">Candidates</h1>
           <p className="text-gray-600">Manage nomination submissions</p>
         </div>
-        <div className="flex space-x-4">
+        <div className="flex flex-wrap gap-4 md:flex-nowrap space-x-4">
           <button
             onClick={fetchCandidates}
             className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors flex items-center gap-2"
