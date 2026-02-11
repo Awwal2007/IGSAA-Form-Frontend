@@ -1289,12 +1289,12 @@ const NominationForm = () => {
             />
             
             <FileUpload 
-              label="Additional Documents (Optional)"
+              label="Payment Receipt"
               field="otherDocuments"
               accept=".pdf,.doc,.docx,image/*"
-              multiple={true}
-              description="Any other supporting documents (max 10MB each)"
-              required={false}
+              // multiple={true}
+              description="Attach your payment receipt (max 5MB each)"
+              required={true}
             />
           </div>
           

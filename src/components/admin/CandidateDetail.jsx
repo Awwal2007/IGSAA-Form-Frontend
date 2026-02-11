@@ -527,7 +527,7 @@ const CandidateDetail = () => {
               
               {candidate.otherDocuments && candidate.otherDocuments.length > 0 && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3">Additional Documents</h4>
+                  <h4 className="font-medium text-gray-900 mb-3">Payment Receipts</h4>
                   <div className="space-y-2">
                     {candidate.otherDocuments.map((docId, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-igsaa-blue/50 transition-colors">
