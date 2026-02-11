@@ -1,0 +1,108 @@
+/* Minimal index.css for Tailwind CSS v4 */
+
+@import "tailwindcss";
+
+:root {
+  --color-igsaa-blue: #1d4ed8;
+  --color-igsaa-blue-dark: #1e40af;
+  --color-igsaa-blue-light: #3b82f6;
+}
+
+@theme {
+  --color-igsaa-blue: var(--color-igsaa-blue);
+  --color-igsaa-blue-dark: var(--color-igsaa-blue-dark);
+  --color-igsaa-blue-light: var(--color-igsaa-blue-light);
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-800 antialiased;
+  }
+}
+
+@layer components {
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-igsaa-blue;
+  }
+  
+  .btn-primary {
+    @apply px-4 py-2 bg-igsaa-blue text-white rounded-md hover:bg-igsaa-blue-dark transition-colors;
+  }
+}
+
+@theme {
+  /* ... existing theme ... */
+  
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-slide-down: slideDown 0.3s ease-out;
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideDown {
+    from {
+      transform: translateY(-20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: var(--animate-fade-in);
+  }
+  
+  .animate-slide-up {
+    animation: var(--animate-slide-up);
+  }
+  
+  .animate-slide-down {
+    animation: var(--animate-slide-down);
+  }
+  
+  .animate-pulse {
+    animation: var(--animate-pulse);
+  }
+  
+  /* Glass effect */
+  .glass-effect {
+    @apply backdrop-blur-md bg-white/80;
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-igsaa-blue-dark to-igsaa-blue bg-clip-text text-transparent;
+  }
+}
