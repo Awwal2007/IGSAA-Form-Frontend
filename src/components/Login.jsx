@@ -12,7 +12,7 @@ const Login = ({ setAuth }) => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
-  const API_URL = 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_BASE_URL;
 
   const handleChange = (e) => {
     setFormData({

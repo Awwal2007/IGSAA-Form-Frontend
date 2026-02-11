@@ -19,7 +19,7 @@ const CandidatesList = () => {
     search: ''
   });
 
-  const API_URL = 'http://localhost:5000/api';
+  const API_URL = import.meta.env.VITE_BASE_URL;
   const token = localStorage.getItem('token');
 
   useEffect(() => {
