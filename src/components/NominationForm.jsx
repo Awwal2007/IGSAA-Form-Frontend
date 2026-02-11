@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
@@ -62,6 +62,11 @@ const NominationForm = () => {
   const [submitMessage, setSubmitMessage] = useState(null);
   const [formProgress, setFormProgress] = useState(0);
   const [currentSection, setCurrentSection] = useState(0);
+  const [fileErrors, setFileErrors] = useState({});
+
+  // Refs for scrolling
+  const successMessageRef = useRef(null);
+  const formTopRef = useRef(null);
 
   // File input refs
   const fileRefs = useRef({
@@ -74,30 +79,51 @@ const NominationForm = () => {
 
   const API_URL = import.meta.env.VITE_BASE_URL;
 
+  // Scroll to top function
+  const scrollToTop = () => {
+    if (formTopRef.current) {
+      formTopRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Scroll to success message
+  const scrollToSuccessMessage = () => {
+    setTimeout(() => {
+      if (successMessageRef.current) {
+        successMessageRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      } else {
+        scrollToTop();
+      }
+    }, 100);
+  };
+
   // Calculate form progress - FIXED VERSION
   const calculateProgress = () => {
     if (submitting) return 100;
     
     let filledFields = 0;
-    const totalRequiredFields = 24; // Total required fields (excluding files)
+    const totalRequiredFields = 28; // Total required fields (including 4 required files)
     
     // Helper function to check if a field has value
     const hasValue = (value) => {
       if (value === null || value === undefined) return false;
       if (typeof value === 'string') return value.trim() !== '';
-      if (typeof value === 'boolean') return true; // Boolean values are valid once selected
+      if (typeof value === 'boolean') return true;
+      if (value instanceof Date) return true;
       return !!value;
     };
     
     // Section A (2-3 fields depending on election type)
     if (hasValue(formData.positionContested)) filledFields++;
     if (hasValue(formData.electionType)) filledFields++;
-    if (formData.electionType === 'Other') {
-      if (hasValue(formData.otherElectionType)) {
-        filledFields++;
-      }
-    } else {
-      // If electionType is not "Other", count it as filled
+    if (formData.electionType === 'Other' && hasValue(formData.otherElectionType)) {
+      filledFields++;
+    } else if (formData.electionType !== 'Other' && formData.electionType !== '') {
       filledFields++;
     }
     
@@ -132,6 +158,12 @@ const NominationForm = () => {
     if (hasValue(formData.declarationName)) filledFields++;
     if (hasValue(formData.declarationDate)) filledFields++;
     
+    // Required Files (4 fields)
+    if (formData.files.passportPhoto) filledFields++;
+    if (formData.files.stanzaTestimony) filledFields++;
+    if (formData.files.signature) filledFields++;
+    if (formData.files.sponsorsSignature) filledFields++;
+    
     // Calculate percentage
     const percentage = Math.round((filledFields / totalRequiredFields) * 100);
     
@@ -139,9 +171,24 @@ const NominationForm = () => {
   };
 
   // Update progress on form changes
-  React.useEffect(() => {
+  useEffect(() => {
     setFormProgress(calculateProgress());
   }, [formData, submitting]);
+
+  // Validate required files
+  const validateRequiredFiles = () => {
+    const errors = {};
+    const requiredFiles = ['passportPhoto', 'stanzaTestimony', 'signature', 'sponsorsSignature'];
+    
+    requiredFiles.forEach(field => {
+      if (!formData.files[field]) {
+        errors[field] = 'This file is required';
+      }
+    });
+    
+    setFileErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -160,6 +207,16 @@ const NominationForm = () => {
 
   const handleFileChange = (e, field) => {
     const files = e.target.files;
+    
+    // Clear error for this field
+    if (fileErrors[field]) {
+      setFileErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
+    
     if (field === 'otherDocuments') {
       setFormData(prev => ({
         ...prev,
@@ -219,6 +276,20 @@ const NominationForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required files
+    if (!validateRequiredFiles()) {
+      // Scroll to file section
+      document.getElementById('sectionFiles')?.scrollIntoView({ behavior: 'smooth' });
+      setCurrentSection(7);
+      
+      setSubmitMessage({
+        type: 'error',
+        message: 'Please upload all required documents before submitting.'
+      });
+      return;
+    }
+    
     setSubmitting(true);
     setSubmitMessage(null);
 
@@ -234,7 +305,7 @@ const NominationForm = () => {
         }
       }
 
-      // Upload other documents
+      // Upload other documents (optional)
       if (formData.files.otherDocuments.length > 0) {
         const otherDocs = [];
         for (const file of formData.files.otherDocuments) {
@@ -262,6 +333,11 @@ const NominationForm = () => {
         message: `Nomination submitted successfully! Your Form Number is: ${response.data.formNumber}`,
         formNumber: response.data.formNumber
       });
+      
+      // Scroll to success message after state update
+      setTimeout(() => {
+        scrollToSuccessMessage();
+      }, 100);
       
       // Reset form
       setFormData({
@@ -307,18 +383,27 @@ const NominationForm = () => {
         if (ref) ref.value = '';
       });
       
+      // Clear upload progress
+      setUploadProgress({});
+      
     } catch (error) {
       setSubmitMessage({
         type: 'error',
         message: error.response?.data?.message || 'Error submitting nomination. Please try again.'
       });
+      
+      // Scroll to error message
+      setTimeout(() => {
+        scrollToSuccessMessage();
+      }, 100);
+      
     } finally {
       setSubmitting(false);
     }
   };
 
   // Custom File Upload Component with visual feedback
-  const FileUpload = ({ label, field, accept, multiple, description }) => {
+  const FileUpload = ({ label, field, accept, multiple, description, required = false }) => {
     const hasFile = multiple 
       ? formData.files[field]?.length > 0
       : formData.files[field];
@@ -326,6 +411,8 @@ const NominationForm = () => {
     const fileName = multiple 
       ? formData.files[field]?.map(f => f.name).join(', ')
       : formData.files[field]?.name;
+    
+    const hasError = fileErrors[field];
 
     const getFileIcon = (fileName) => {
       if (!fileName) return '📄';
@@ -338,12 +425,21 @@ const NominationForm = () => {
 
     return (
       <div className="mb-6">
-        <label className="block text-sm font-semibold text-gray-700 mb-2">
-          {label}
-          <span className="text-xs font-normal text-gray-500 block mt-1">{description}</span>
-        </label>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-semibold text-gray-700">
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+          {required && !hasFile && (
+            <span className="text-xs text-red-500 font-medium">Required</span>
+          )}
+        </div>
+        <span className="text-xs font-normal text-gray-500 block mb-2">{description}</span>
         
-        <div className={`relative border-2 ${hasFile ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-white'} rounded-xl transition-all duration-300 hover:border-igsaa-blue cursor-pointer`}>
+        <div className={`relative border-2 rounded-xl transition-all duration-300 cursor-pointer
+          ${hasError ? 'border-red-500 bg-red-50' : 
+            hasFile ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-white hover:border-igsaa-blue'
+          }`}>
           <input
             ref={el => fileRefs.current[field] = el}
             type="file"
@@ -352,11 +448,15 @@ const NominationForm = () => {
             multiple={multiple}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             id={`file-${field}`}
+            required={required && !hasFile}
           />
           
           <div className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${hasFile ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center 
+                ${hasError ? 'bg-red-100 text-red-600' :
+                  hasFile ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                }`}>
                 <span className="text-2xl">{getFileIcon(fileName)}</span>
               </div>
               
@@ -379,14 +479,29 @@ const NominationForm = () => {
               </div>
             </div>
             
-            <div className={`px-3 py-1 rounded-lg ${hasFile ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-              <span className="text-sm font-medium">{hasFile ? 'Selected ✓' : 'Browse'}</span>
+            <div className={`px-3 py-1 rounded-lg 
+              ${hasError ? 'bg-red-100 text-red-700' :
+                hasFile ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+              }`}>
+              <span className="text-sm font-medium">
+                {hasFile ? 'Selected ✓' : 'Browse'}
+              </span>
             </div>
           </div>
         </div>
 
+        {/* Error message */}
+        {hasError && (
+          <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            {hasError}
+          </p>
+        )}
+
         {/* File details */}
-        {hasFile && (
+        {hasFile && !hasError && (
           <div className="mt-2 animate-fade-in">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2">
@@ -436,7 +551,10 @@ const NominationForm = () => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto px-1 sm:px-6">
+      {/* Hidden anchor for scrolling to top */}
+      <div ref={formTopRef} className="h-0"></div>
+      
       {/* Progress Bar */}
       <div className="mb-8 bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
         <div className="flex items-center justify-between mb-4">
@@ -458,7 +576,7 @@ const NominationForm = () => {
         </div>
         
         {/* Section dots */}
-        <div className="flex justify-between mt-4">
+        <div className="flex justify-between mt-4 overflow-x-auto pb-2">
           {sections.map((section, index) => (
             <button
               key={section.id}
@@ -466,9 +584,9 @@ const NominationForm = () => {
                 document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth' });
                 setCurrentSection(index);
               }}
-              className={`flex flex-col items-center ${index === currentSection ? 'text-igsaa-blue' : 'text-gray-400'}`}
+              className={`flex flex-col items-center mx-1 ${index === currentSection ? 'text-igsaa-blue' : 'text-gray-400 hover:text-gray-600'}`}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 ${
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1 transition-colors ${
                 index <= currentSection 
                   ? 'bg-igsaa-blue text-white' 
                   : 'bg-gray-200 text-gray-400'
@@ -481,13 +599,16 @@ const NominationForm = () => {
         </div>
       </div>
 
-      {/* Success/Error Message */}
+      {/* Success/Error Message - with ref for scrolling */}
       {submitMessage && (
-        <div className={`mb-8 rounded-2xl p-6 animate-slide-down ${
-          submitMessage.type === 'success' 
-            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' 
-            : 'bg-gradient-to-r from-red-50 to-pink-50 border border-red-200'
-        }`}>
+        <div 
+          ref={successMessageRef}
+          className={`mb-8 rounded-2xl p-6 animate-slide-down scroll-mt-4 ${
+            submitMessage.type === 'success' 
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' 
+              : 'bg-gradient-to-r from-red-50 to-pink-50 border border-red-200'
+          }`}
+        >
           <div className="flex items-start gap-4">
             <div className={`p-3 rounded-full ${
               submitMessage.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
@@ -526,8 +647,8 @@ const NominationForm = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Section A */}
-        <div id="sectionA" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+        {/* Section A - General Information */}
+        <div id="sectionA" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-50 rounded-xl">
               <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -621,8 +742,8 @@ const NominationForm = () => {
           </div>
         </div>
 
-        {/* Section B */}
-        <div id="sectionB" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+        {/* Section B - Bio-Data */}
+        <div id="sectionB" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-purple-100 to-purple-50 rounded-xl">
               <svg className="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
@@ -738,7 +859,7 @@ const NominationForm = () => {
                 value={formData.yearOfGraduation}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-igsaa-blue focus:border-transparent"
-                min={formData.yearOfAdmission}
+                min={formData.yearOfAdmission || 1900}
                 max={new Date().getFullYear()}
                 placeholder="YYYY"
                 required
@@ -813,8 +934,8 @@ const NominationForm = () => {
           </div>
         </div>
 
-        {/* Section C */}
-        <div id="sectionC" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+        {/* Section C - Membership & Eligibility */}
+        <div id="sectionC" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-green-100 to-green-50 rounded-xl">
               <svg className="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -835,7 +956,7 @@ const NominationForm = () => {
               { name: 'hasBeenDisciplined', label: 'Have you ever been suspended or disciplined by your stanza or IGSAA?' }
             ].map(({ name, label }) => (
               <div key={name} className="bg-gray-50 p-4 rounded-xl">
-                <p className="text-gray-700 mb-3">{label}</p>
+                <p className="text-gray-700 mb-3 font-medium">{label}</p>
                 <div className="flex gap-4">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <div className="relative">
@@ -895,8 +1016,8 @@ const NominationForm = () => {
           </div>
         </div>
 
-        {/* Section D */}
-        <div id="sectionD" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+        {/* Section D - Experience & Service */}
+        <div id="sectionD" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-amber-100 to-amber-50 rounded-xl">
               <svg className="w-6 h-6 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
@@ -941,10 +1062,10 @@ const NominationForm = () => {
           </div>
         </div>
 
-        {/* Section E & F */}
+        {/* Section E & F - Sponsors */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Section E */}
-          <div id="sectionE" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+          {/* Section E - 1st Sponsor */}
+          <div id="sectionE" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-gradient-to-br from-indigo-100 to-indigo-50 rounded-xl">
                 <svg className="w-6 h-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
@@ -1005,8 +1126,8 @@ const NominationForm = () => {
             </div>
           </div>
 
-          {/* Section F */}
-          <div id="sectionF" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+          {/* Section F - 2nd Sponsor */}
+          <div id="sectionF" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-gradient-to-br from-pink-100 to-pink-50 rounded-xl">
                 <svg className="w-6 h-6 text-pink-600" fill="currentColor" viewBox="0 0 20 20">
@@ -1068,8 +1189,8 @@ const NominationForm = () => {
           </div>
         </div>
 
-        {/* Section G */}
-        <div id="sectionG" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+        {/* Section G - Declaration */}
+        <div id="sectionG" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-red-100 to-red-50 rounded-xl">
               <svg className="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
@@ -1091,10 +1212,10 @@ const NominationForm = () => {
                   name="declarationName"
                   value={formData.declarationName}
                   onChange={handleInputChange}
-                  className="inline-block mx-2 px-4 py-2 border-2 border-dashed border-blue-300 rounded-lg focus:outline-none focus:border-solid focus:border-igsaa-blue focus:ring-2 focus:ring-igsaa-blue/30 bg-white"
+                  className="inline-block mx-2 px-4 py-2 w-full border-2 border-dashed border-blue-300 rounded-lg focus:outline-none focus:border-solid focus:border-igsaa-blue focus:ring-2 focus:ring-igsaa-blue/30 bg-white"
                   placeholder="Enter your full name here"
                   required
-                  style={{ minWidth: '250px' }}
+                  style={{ minWidth: '200px' }}
                 />
                 , hereby declare that the information provided in this form is true and correct.
               </p>
@@ -1120,8 +1241,8 @@ const NominationForm = () => {
           </div>
         </div>
 
-        {/* File Upload Section */}
-        <div id="sectionFiles" className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200 animate-fade-in">
+        {/* File Upload Section - REQUIRED FILES */}
+        <div id="sectionFiles" className="bg-white rounded-2xl shadow-sm p-6 md:p-8 border border-gray-200">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-3 bg-gradient-to-br from-emerald-100 to-emerald-50 rounded-xl">
               <svg className="w-6 h-6 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
@@ -1130,7 +1251,7 @@ const NominationForm = () => {
             </div>
             <div>
               <h3 className="text-xl font-bold text-gray-900">ATTACH REQUIRED DOCUMENTS</h3>
-              <p className="text-gray-600">Upload all required supporting documents</p>
+              <p className="text-gray-600">Upload all required supporting documents (<span className="text-red-500 font-semibold">* Required</span>)</p>
             </div>
           </div>
           
@@ -1140,6 +1261,7 @@ const NominationForm = () => {
               field="passportPhoto"
               accept="image/*"
               description="Recent passport-sized photo (JPG/PNG, max 5MB)"
+              required={true}
             />
             
             <FileUpload 
@@ -1147,6 +1269,7 @@ const NominationForm = () => {
               field="stanzaTestimony"
               accept=".pdf,.doc,.docx"
               description="Official testimony document (PDF/DOC, max 10MB)"
+              required={true}
             />
             
             <FileUpload 
@@ -1154,6 +1277,7 @@ const NominationForm = () => {
               field="signature"
               accept="image/*,.pdf"
               description="Scanned or digital signature (Image/PDF, max 5MB)"
+              required={true}
             />
             
             <FileUpload 
@@ -1161,14 +1285,16 @@ const NominationForm = () => {
               field="sponsorsSignature"
               accept="image/*,.pdf"
               description="Signatures of both sponsors (Image/PDF, max 5MB)"
+              required={true}
             />
             
             <FileUpload 
-              label="Additional Documents"
+              label="Additional Documents (Optional)"
               field="otherDocuments"
               accept=".pdf,.doc,.docx,image/*"
               multiple={true}
               description="Any other supporting documents (max 10MB each)"
+              required={false}
             />
           </div>
           
@@ -1182,6 +1308,10 @@ const NominationForm = () => {
               <div>
                 <h4 className="font-semibold text-blue-900 mb-1">Document Requirements</h4>
                 <ul className="text-sm text-blue-800 space-y-1">
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-500">•</span>
+                    <span><span className="font-semibold">Passport Photograph, Stanza Testimony, Your Signature, and Sponsors' Signatures</span> are <span className="text-red-600 font-bold">REQUIRED</span></span>
+                  </li>
                   <li>• All files must be clear and legible</li>
                   <li>• Maximum file size: 10MB each</li>
                   <li>• Accepted formats: JPG, PNG, PDF, DOC, DOCX</li>
@@ -1193,7 +1323,7 @@ const NominationForm = () => {
         </div>
 
         {/* Submit Section */}
-        <div className="bg-gradient-to-r from-igsaa-blue/5 to-igsaa-blue-light/5 rounded-2xl p-8 border border-igsaa-blue/20 animate-fade-in">
+        <div className="bg-gradient-to-r from-igsaa-blue/5 to-igsaa-blue-light/5 rounded-2xl p-6 md:p-8 border border-igsaa-blue/20">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div className="flex-1">
               <h3 className="text-lg font-bold text-gray-900 mb-2">Ready to Submit?</h3>
@@ -1209,7 +1339,7 @@ const NominationForm = () => {
               </div>
             </div>
             
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <button
                 type="button"
                 onClick={() => {
@@ -1225,7 +1355,7 @@ const NominationForm = () => {
               
               <button
                 type="submit"
-                className="px-8 py-3 bg-gradient-to-r from-igsaa-blue to-igsaa-blue-dark text-white font-semibold rounded-xl hover:from-igsaa-blue-dark hover:to-igsaa-blue-darker transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-8 py-3 bg-gradient-to-r from-igsaa-blue to-igsaa-blue-dark text-white font-semibold rounded-xl hover:from-igsaa-blue-dark hover:to-igsaa-blue-darker transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[200px]"
                 disabled={submitting || formProgress < 100}
               >
                 {submitting ? (
@@ -1250,8 +1380,8 @@ const NominationForm = () => {
           
           {formProgress < 100 && (
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 <div>
@@ -1259,7 +1389,8 @@ const NominationForm = () => {
                     Complete all required fields before submitting
                   </p>
                   <p className="text-yellow-700 text-sm mt-1">
-                    Please fill in all sections marked with <span className="text-red-500">*</span> to enable submission.
+                    Please fill in all sections marked with <span className="text-red-500">*</span> and upload all 
+                    <span className="font-semibold"> required documents</span> to enable submission.
                   </p>
                 </div>
               </div>

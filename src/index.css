@@ -7,6 +7,9 @@
   --color-igsaa-blue-dark: #1e40af;
   --color-igsaa-blue-light: #3b82f6;
 }
+button {
+  cursor: pointer;
+}
 
 @theme {
   --color-igsaa-blue: var(--color-igsaa-blue);

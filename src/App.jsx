@@ -46,17 +46,17 @@ function App() {
           <div className="min-h-screen bg-gradient-to-b from-blue-50/50 to-gray-100/50">
             <header className="bg-igsaa-blue-dark text-white p-4">
               <div className="container mx-auto flex items-center gap-8 justify-center">
-                <div>
-                  <img className='h-20' src={logo} alt="Iwo Grammar school logo" />
+                <div className='w-50'>
+                  <img className='h-full w-full object-cover' src={logo} alt="Iwo Grammar school logo" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold">IWO GRAMMAR SCHOOL ALUMNI ASSOCIATION</h1>
+                  <h1 className="text-xl  md:text-2xl font-bold">IWO GRAMMAR SCHOOL ALUMNI ASSOCIATION</h1>
                   <p className="text-blue-100/90">Candidate Nomination Portal</p>
                 </div>
               </div>
             </header>
             
-            <main className="container mx-auto p-4">
+            <main className="container mx-auto p-2 md:p-4">
               <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-200">
                 <h2 className="text-3xl font-bold text-center text-igsaa-blue-dark mb-2">
                   CANDIDATE NOMINATION FORM
