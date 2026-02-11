@@ -112,8 +112,8 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"> */}
-      <div className="admin-card">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="admin-card gap-2">
+        <div className="bg-white rounded-lg shadow p-6 mb-2">
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-blue-100 p-3 rounded-lg">
               <span className="text-2xl">👥</span>
@@ -125,7 +125,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 mb-2">
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-yellow-100 p-3 rounded-lg">
               <span className="text-2xl">⏳</span>
@@ -137,7 +137,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 mb-2">
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-green-100 p-3 rounded-lg">
               <span className="text-2xl">✅</span>
@@ -149,7 +149,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 mb-2">
           <div className="flex items-center">
             <div className="flex-shrink-0 bg-red-100 p-3 rounded-lg">
               <span className="text-2xl">❌</span>

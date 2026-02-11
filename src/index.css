@@ -10,6 +10,9 @@
 button {
   cursor: pointer;
 }
+.admin-card{
+  display: block;
+}
 
 @theme {
   --color-igsaa-blue: var(--color-igsaa-blue);

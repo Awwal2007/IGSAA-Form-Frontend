@@ -240,7 +240,7 @@ const AdminLayout = ({ user, logout }) => {
 
         {/* Page content */}
         <main className="flex-1">
-          <div className="p-6">
+          <div className="p-2 md:p-6">
             <div className="max-w-7xl mx-auto">
               <Outlet />
             </div>
